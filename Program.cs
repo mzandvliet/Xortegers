@@ -28,7 +28,7 @@ namespace Xortegers
 
         Possible iffy things:
 
-        - Multiplication will be slower, I think?
+        - Operations will be slower, I think?
 
         In general, operations now require at least as many
         clock cycles as there are bits in a number. But conversely,
@@ -101,40 +101,79 @@ namespace Xortegers
         kind of disingenuous.
 
         How about Lateger? Lateral Integer? Anyways...
+
+
+        === Performance Testing ===
+
+        With only the first 8 integers of A and B set to
+        non-zero values, we get a vast difference in perf:
+
+        99999x Integer additions:   33872   ticks
+        99999x Xorteger additions:  181261  ticks
+
+        That's a ~5.3x decrease in speed.
+
+        But when we fill the inputs up with significant
+        non-zero numbers, we get:
+
+        99999x Integer additions:   118922  ticks
+        99999x Xorteger additions:  181261  ticks
+
+        Which is only a ~1.5x difference in speed.
+
+        1.5x for this naive implementation is better
+        than I expected.
+
+        --
+
+        It makes sense that integer arithmetic with lots
+        of zeroes, running on cleverly designed hardware,
+        would be able to skip lots of work.
         */
 
         static void Main(string[] args)
         {
-            var intsA = new word[] {
-                1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-            };
+            var rand = new System.Random(1234);
 
-            var intsB = new word[] {
-                3,
-                1,
-                6,
-                7,
-                11,
-                9,
-                123,
-                2,
-            };
+            // Generate some random inputs
+
+            var intsA = new word[32];
+            for (uint i = 0; i < intsA.Length; i++) {
+                // intsA[i] = i + 1;
+                intsA[i] = (uint)rand.Next(0, int.MaxValue >> 4);
+            }
+
+            var intsB = new word[32];
+            for (uint i = 0; i < intsA.Length; i++) {
+                intsB[i] = (uint)rand.Next(0, int.MaxValue >> 4);
+            }
+
+            // Convert to Xort format
 
             var xortsA = Int2Xort(intsA);
             var xortsB = Int2Xort(intsB);
 
+            // Perform regular integer adds, measure time
+
             var intsR = new word[32];
-            Int_Add(intsA, intsB, intsR);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0; i < 99999; i++) {
+                Int_Add(intsA, intsB, intsR);
+            }
+            watch.Stop();
+            Console.WriteLine("Int adds ticks: " + watch.ElapsedTicks);
+
+            // Perform xorteger adds, measure time
 
             var xortsR = new word[32];
-            Xort_Add(xortsA, xortsB, xortsR);
+            watch = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0; i < 99999; i++) {
+                Xort_Add(xortsA, xortsB, xortsR);
+            }
+            watch.Stop();
+            Console.WriteLine("Xort adds ticks: " + watch.ElapsedTicks);
+
+            // Print xort addition results as ints
 
             var xortsRInt = new word[32];
             Xort2Int(xortsR, xortsRInt);
