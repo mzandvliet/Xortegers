@@ -48,12 +48,7 @@ namespace Xortegers
         877 bit number? You merely make longer arrays, and
         performance and memory scale ~linearly with that.
 
-        PRIME-valued word lengths! If there are any algorithms
-        that you know would be fast if you could work with
-        prime ratios intrinsically, this scheme might be worth
-        a short. One area that just came up: spatial indexing
-        scheme in which you want to avoid overlapping micro-
-        word boundaries for particles moving in a binary field.
+        Prime-valued word lengths? Go right ahead.
 
         - Good performance for non-32-bit number types
 
@@ -62,11 +57,14 @@ namespace Xortegers
         data types such that they fit a given SIMD instruction
         set.
 
-        However, it appears SIMD primarily deals with 32-bit
-        types. C#, too, in its core language, assumes many
-        operations happen at the 32-bit word level, and
-        smaller word length types are emulated on this 32-bit
-        pathway. (Note: 64-bit on modern systems, but same idea.)
+        C#, in its core language, assumes many operations
+        happen at the 32-bit word level, and smaller word length
+        types are emulated on this 32-bit pathway. (Note: 64-bit
+        on modern systems, but same idea.)
+
+        Unity's Burst compiler has limited auto-vectorization
+        capabilities when it tries to optimize my fixed-point
+        number implementations, too.
 
         This means that while my fixed point types may make
         fantastic use of bits on a conceptual level, they
@@ -77,13 +75,6 @@ namespace Xortegers
         turns out to be a waste in  terms of information
         per unit of bandwidth.
 
-        Are there 8-bit SIMD intrinsics? Maybe yes, maybe no...
-
-        https://stackoverflow.com/questions/8193601/sse-multiplication-16-x-uint8-t
-
-        Anyway, the xorteger scheme would, in theory, make
-        far better use of available bandwidth.
-
         - Bit shifting now means shifting array indexes, which
         can still be relatively quick. And again, you shift
         like 32 of them at the same time.
@@ -93,11 +84,12 @@ namespace Xortegers
         Since we're implementing fundamental ops like addition
         at user-code level, we get to decide what we do
         with any non-zero bits remaining after operations
-        complete.
+        complete. It's like you'd always have overflow bit
+        information available.
 
         - Revercimals
 
-        Revercimals might work well in this format. Addition
+        Revercimals might work well in this format. Multiplication
         on the xortegers will require classical integer
         multiplication techniques, which at best have something
         like n*log(n) complexity. Revercimals can do better.
@@ -108,8 +100,9 @@ namespace Xortegers
         boolean operations used to achieve the result, it is
         kind of disingenuous.
 
-        How about Lateger? Lateral Integer?
+        How about Lateger? Lateral Integer? Anyways...
         */
+
         static void Main(string[] args)
         {
             var intsA = new word[] {
@@ -151,7 +144,7 @@ namespace Xortegers
             PrintIntegers(intsB);
             Console.WriteLine("================================");
             PrintIntegers(xortsRInt);
-            Console.WriteLine("=?=?=?=?=?======================");
+            Console.WriteLine("===== should be equal to: ======");
             PrintIntegers(intsR);
         }
 
