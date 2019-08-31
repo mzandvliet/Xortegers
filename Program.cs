@@ -125,6 +125,15 @@ namespace LateralIntegers
 
         --
 
+        Now a very fun step! Adding 32 Byte-words
+
+        Byte adds ticks: 125263
+        LInt adds ticks: 49863
+
+        Kapow!
+
+        --
+
         It makes sense that integer arithmetic with lots
         of zeroes, running on cleverly designed hardware,
         would be able to skip lots of work.
@@ -132,33 +141,39 @@ namespace LateralIntegers
 
         static void Main(string[] args)
         {
+            // AddInt32();
+            AddInt8();
+        }
+
+
+        /*
+        Add 32 32-bit numbers to each other
+         */
+        private static void AddInt32() {
             var rand = new System.Random(1234);
 
             // Generate some random inputs
 
             var aInt = new word_u32[32];
-            for (uint i = 0; i < aInt.Length; i++) {
-                aInt[i] = (uint)rand.Next(0, int.MaxValue >> 4);
-            }
-
             var bInt = new word_u32[32];
             for (uint i = 0; i < aInt.Length; i++) {
-                bInt[i] = (uint)rand.Next(0, int.MaxValue >> 4);
+                aInt[i] = (uint)rand.Next(0, int.MaxValue >> 2);
+                bInt[i] = (uint)rand.Next(0, int.MaxValue >> 2);
             }
 
             // Convert to LInt format
 
             var aLInt = new word_u32[32];
             var bLInt = new word_u32[32];
-            LInt32.ToLInt(aInt, aLInt);
-            LInt32.ToLInt(bInt, bLInt);
+            LUInt32.ToLInt(aInt, aLInt);
+            LUInt32.ToLInt(bInt, bLInt);
 
             // Perform regular integer adds, measure time
 
             var rInt = new word_u32[32];
             var watch = System.Diagnostics.Stopwatch.StartNew();
             for (int i = 0; i < 99999; i++) {
-                LInt32.Add(aInt, bInt, rInt);
+                UInt.Add(aInt, bInt, rInt);
             }
             watch.Stop();
             Console.WriteLine("Int adds ticks: " + watch.ElapsedTicks);
@@ -168,7 +183,7 @@ namespace LateralIntegers
             var rLInt = new word_u32[32];
             watch = System.Diagnostics.Stopwatch.StartNew();
             for (int i = 0; i < 99999; i++) {
-                LInt32.Add(aLInt, bLInt, rLInt);
+                LUInt32.Add(aLInt, bLInt, rLInt);
             }
             watch.Stop();
             Console.WriteLine("LInt adds ticks: " + watch.ElapsedTicks);
@@ -176,34 +191,103 @@ namespace LateralIntegers
             // Print linteger addition results as integers
 
             var rAsInt = new word_u32[32];
-            LInt32.ToInt(rLInt, rAsInt);
+            LUInt32.ToInt(rLInt, rAsInt);
 
-            PrintIntegers(aInt);
+            UInt.Print(aInt);
             Console.WriteLine("++++++++++++++++++++++++++++++++");
-            PrintIntegers(bInt);
+            UInt.Print(bInt);
             Console.WriteLine("================================");
-            PrintIntegers(rAsInt);
+            UInt.Print(rAsInt);
             Console.WriteLine("===== should be equal to: ======");
-            PrintIntegers(rInt);
+            UInt.Print(rInt);
         }
 
+        /*
+       Add 32 8-bit numbers to each other
+        */
+        private static void AddInt8() {
+            var rand = new System.Random(1234);
 
-        public static void PrintIntegers(in word_u32[] ints) {
+            // Generate some random inputs
+
+            var aInt = new word_u8[32];
+            var bInt = new word_u8[32];
+            for (uint i = 0; i < aInt.Length; i++) {
+                aInt[i] = (byte)rand.Next(0, byte.MaxValue >> 2);
+                bInt[i] = (byte)rand.Next(0, byte.MaxValue >> 2);
+            }
+
+            // Convert to LInt format
+
+            var aLInt = new word_u32[8];
+            var bLInt = new word_u32[8];
+            LUInt32.ToLInt(aInt, aLInt);
+            LUInt32.ToLInt(bInt, bLInt);
+
+            // Perform regular integer adds, measure time
+
+            var rInt = new word_u8[32];
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0; i < 99999; i++) {
+                UInt.Add(aInt, bInt, rInt);
+            }
+            watch.Stop();
+            Console.WriteLine("Byte adds ticks: " + watch.ElapsedTicks);
+
+            // Perform linteger adds, measure time
+
+            var rLInt = new word_u32[32];
+            watch = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0; i < 99999; i++) {
+                LUInt32.Add(aLInt, bLInt, rLInt);
+            }
+            watch.Stop();
+            Console.WriteLine("LInt adds ticks: " + watch.ElapsedTicks);
+
+            // Print linteger addition results as integers
+
+            var rAsInt = new word_u8[32];
+            LUInt32.ToInt(rLInt, rAsInt);
+
+            UInt.Print(aInt);
+            Console.WriteLine("++++++++++++++++++++++++++++++++");
+            UInt.Print(bInt);
+            Console.WriteLine("================================");
+            UInt.Print(rAsInt);
+            Console.WriteLine("===== should be equal to: ======");
+            UInt.Print(rInt);
+        }
+
+        
+    }
+
+    public static class UInt {
+        public static void Add(in word_u32[] a, in word_u32[] b, word_u32[] r) {
+            for (int i = 0; i < a.Length; i++) {
+                r[i] = a[i] + b[i];
+            }
+        }
+
+        public static void Add(in word_u8[] a, in word_u8[] b, word_u8[] r) {
+            for (int i = 0; i < a.Length; i++) {
+                r[i] = (word_u8)(a[i] + b[i]);
+            }
+        }
+
+        public static void Print(in word_u32[] ints) {
+            for (int i = 0; i < ints.Length; i++) {
+                Console.WriteLine($@"[{i}]: {ints[i]}");
+            }
+        }
+
+        public static void Print(in word_u8[] ints) {
             for (int i = 0; i < ints.Length; i++) {
                 Console.WriteLine($@"[{i}]: {ints[i]}");
             }
         }
     }
 
-    public static class Int {
-        public static void Add(in word_u32[] a, in word_u32[] b, word_u32[] r) {
-            for (int i = 0; i < a.Length; i++) {
-                r[i] = a[i] + b[i];
-            }
-        }
-    }
-
-    public static class LInt32 {
+    public static class LUInt32 {
         public static word_u32 Add(in word_u32[] a, in word_u32[] b, word_u32[] r) {
             word_u32 carry = 0;
             for (int i = 0; i < a.Length; i++) {
@@ -215,7 +299,7 @@ namespace LateralIntegers
         }
 
         public static void ToLInt(in word_u32[] ints, word_u32[] lints) {
-            for (int b = 0; b < 32; b++) {
+            for (int b = 0; b < lints.Length; b++) {
                 lints[b] = 0;
                 for (int i = 0; i < ints.Length; i++) {
                     lints[b] |= ((ints[i] >> b) & 0x0000_0001) << i;
@@ -223,11 +307,29 @@ namespace LateralIntegers
             }
         }
 
+        public static void ToLInt(in word_u8[] ints, word_u32[] lints) {
+            for (int b = 0; b < lints.Length; b++) {
+                lints[b] = 0;
+                for (int i = 0; i < ints.Length; i++) {
+                    lints[b] |= (((uint)ints[i] >> b) & 0x0000_0001) << i;
+                }
+            }
+        }
+
         public static void ToInt(in word_u32[] lints, word_u32[] ints) {
             for (int i = 0; i < ints.Length; i++) {
                 ints[i] = 0;
-                for (int b = 0; b < 32; b++) {
+                for (int b = 0; b < lints.Length; b++) {
                     ints[i] |= ((lints[b] >> i) & 0x0000_0001) << b;
+                }
+            }
+        }
+
+        public static void ToInt(in word_u32[] lints, word_u8[] ints) {
+            for (int i = 0; i < ints.Length; i++) {
+                ints[i] = 0;
+                for (int b = 0; b < lints.Length; b++) {
+                    ints[i] |= (byte)(((lints[b] >> i) & 0x0000_0001) << b);
                 }
             }
         }
