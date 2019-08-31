@@ -1,8 +1,9 @@
 ﻿using System;
 
-using word = System.UInt32;
+using word_u32 = System.UInt32;
+using word_u8 = System.Byte;
 
-namespace Xortegers
+namespace LateralIntegers
 {
     class Program
     {
@@ -90,17 +91,15 @@ namespace Xortegers
         - Revercimals
 
         Revercimals might work well in this format. Multiplication
-        on the xortegers will require classical integer
+        on the lintegers will require classical integer
         multiplication techniques, which at best have something
         like n*log(n) complexity. Revercimals can do better.
 
         - Naming
 
-        Xorteger is funny, but since it is only one of three
-        boolean operations used to achieve the result, it is
-        kind of disingenuous.
+        Renamed everything from Xorteger to LInteger, meaning:
 
-        How about Lateger? Lateral Integer? Anyways...
+        Lateral Integer
 
 
         === Performance Testing ===
@@ -109,7 +108,7 @@ namespace Xortegers
         non-zero values, we get a vast difference in perf:
 
         99999x Integer additions:   33872   ticks
-        99999x Xorteger additions:  181261  ticks
+        99999x LInteger additions:  181261  ticks
 
         That's a ~5.3x decrease in speed.
 
@@ -117,7 +116,7 @@ namespace Xortegers
         non-zero numbers, we get:
 
         99999x Integer additions:   118922  ticks
-        99999x Xorteger additions:  181261  ticks
+        99999x LInteger additions:  181261  ticks
 
         Which is only a ~1.5x difference in speed.
 
@@ -137,103 +136,105 @@ namespace Xortegers
 
             // Generate some random inputs
 
-            var intsA = new word[32];
-            for (uint i = 0; i < intsA.Length; i++) {
-                // intsA[i] = i + 1;
-                intsA[i] = (uint)rand.Next(0, int.MaxValue >> 4);
+            var aInt = new word_u32[32];
+            for (uint i = 0; i < aInt.Length; i++) {
+                aInt[i] = (uint)rand.Next(0, int.MaxValue >> 4);
             }
 
-            var intsB = new word[32];
-            for (uint i = 0; i < intsA.Length; i++) {
-                intsB[i] = (uint)rand.Next(0, int.MaxValue >> 4);
+            var bInt = new word_u32[32];
+            for (uint i = 0; i < aInt.Length; i++) {
+                bInt[i] = (uint)rand.Next(0, int.MaxValue >> 4);
             }
 
-            // Convert to Xort format
+            // Convert to LInt format
 
-            var xortsA = Int2Xort(intsA);
-            var xortsB = Int2Xort(intsB);
+            var aLInt = new word_u32[32];
+            var bLInt = new word_u32[32];
+            LInt32.ToLInt(aInt, aLInt);
+            LInt32.ToLInt(bInt, bLInt);
 
             // Perform regular integer adds, measure time
 
-            var intsR = new word[32];
+            var rInt = new word_u32[32];
             var watch = System.Diagnostics.Stopwatch.StartNew();
             for (int i = 0; i < 99999; i++) {
-                Int_Add(intsA, intsB, intsR);
+                LInt32.Add(aInt, bInt, rInt);
             }
             watch.Stop();
             Console.WriteLine("Int adds ticks: " + watch.ElapsedTicks);
 
-            // Perform xorteger adds, measure time
+            // Perform linteger adds, measure time
 
-            var xortsR = new word[32];
+            var rLInt = new word_u32[32];
             watch = System.Diagnostics.Stopwatch.StartNew();
             for (int i = 0; i < 99999; i++) {
-                Xort_Add(xortsA, xortsB, xortsR);
+                LInt32.Add(aLInt, bLInt, rLInt);
             }
             watch.Stop();
-            Console.WriteLine("Xort adds ticks: " + watch.ElapsedTicks);
+            Console.WriteLine("LInt adds ticks: " + watch.ElapsedTicks);
 
-            // Print xort addition results as ints
+            // Print linteger addition results as integers
 
-            var xortsRInt = new word[32];
-            Xort2Int(xortsR, xortsRInt);
+            var rAsInt = new word_u32[32];
+            LInt32.ToInt(rLInt, rAsInt);
 
-            PrintIntegers(intsA);
+            PrintIntegers(aInt);
             Console.WriteLine("++++++++++++++++++++++++++++++++");
-            PrintIntegers(intsB);
+            PrintIntegers(bInt);
             Console.WriteLine("================================");
-            PrintIntegers(xortsRInt);
+            PrintIntegers(rAsInt);
             Console.WriteLine("===== should be equal to: ======");
-            PrintIntegers(intsR);
+            PrintIntegers(rInt);
         }
 
-        public static void Int_Add(in word[] a, in word[] b, word[] r) {
+
+        public static void PrintIntegers(in word_u32[] ints) {
+            for (int i = 0; i < ints.Length; i++) {
+                Console.WriteLine($@"[{i}]: {ints[i]}");
+            }
+        }
+    }
+
+    public static class Int {
+        public static void Add(in word_u32[] a, in word_u32[] b, word_u32[] r) {
             for (int i = 0; i < a.Length; i++) {
                 r[i] = a[i] + b[i];
             }
         }
+    }
 
-        public static word Xort_Add(in word[] a, in word[] b, word[] r) {
-            word carry = 0;
+    public static class LInt32 {
+        public static word_u32 Add(in word_u32[] a, in word_u32[] b, word_u32[] r) {
+            word_u32 carry = 0;
             for (int i = 0; i < a.Length; i++) {
-                word a_plus_b = a[i] ^ b[i];
+                word_u32 a_plus_b = a[i] ^ b[i];
                 r[i] = a_plus_b ^ carry;
                 carry = (a[i] & b[i]) ^ (carry & a_plus_b);
             }
             return carry;
         }
 
-        public static word[] Int2Xort(in word[] ints) {
-            var xorts = new word[32];
-
+        public static void ToLInt(in word_u32[] ints, word_u32[] lints) {
             for (int b = 0; b < 32; b++) {
-                xorts[b] = 0;
+                lints[b] = 0;
                 for (int i = 0; i < ints.Length; i++) {
-                    xorts[b] |= ((ints[i] >> b) & 0x0000_0001) << i;
+                    lints[b] |= ((ints[i] >> b) & 0x0000_0001) << i;
                 }
             }
-
-            return xorts;
         }
 
-        public static void Xort2Int(in word[] xorts, word[] ints) {
+        public static void ToInt(in word_u32[] lints, word_u32[] ints) {
             for (int i = 0; i < ints.Length; i++) {
                 ints[i] = 0;
                 for (int b = 0; b < 32; b++) {
-                    ints[i] |= ((xorts[b] >> i) & 0x0000_0001) << b;
+                    ints[i] |= ((lints[b] >> i) & 0x0000_0001) << b;
                 }
             }
         }
 
-        public static void PrintIntegers(in word[] ints) {
-            for (int i = 0; i < ints.Length; i++) {
-                Console.WriteLine($@"[{i}]: {ints[i]}");
-            }
-        }
-
-        public static void PrintXortegers(in word[] xorts) {
-            for (int i = 0; i < xorts.Length; i++) {
-                Console.WriteLine(ToBitString(xorts[i]));
+        public static void Print(in word_u32[] lints) {
+            for (int i = 0; i < lints.Length; i++) {
+                Console.WriteLine(ToBitString(lints[i]));
             }
         }
 
