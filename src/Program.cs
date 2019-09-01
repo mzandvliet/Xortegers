@@ -6,7 +6,9 @@ namespace NumberTests
     {
         static void Main(string[] args)
         {
-            LateralInteger.Tests.AddInt8();
+            // LateralInteger.Tests.AddInt8();
+
+            PrimeFactorTests.Run();
         }
     }
 }
