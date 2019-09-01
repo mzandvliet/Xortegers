@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public static class PrimeFactorTests {
     public static void Run() {
@@ -9,7 +10,7 @@ public static class PrimeFactorTests {
         to factor those numbers.
          */
 
-        const int numMax = ushort.MaxValue;
+        const int numMax = 128; // ushort.MaxValue
 
         var primes = SievePrimes(numMax);
        
@@ -17,16 +18,30 @@ public static class PrimeFactorTests {
 
         for (uint num = 0; num < numMax; num++) {
             var factors = FindPrimeFactors(num, primes);
+
+            // Print factorization for this number
+            string factorsString = factors
+                .Select(pair => $@"({pair.Key} * {pair.Value})")
+                .DefaultIfEmpty(num.ToString())
+                .Aggregate((a, b) => a + " * " + b);
+
+            Console.WriteLine($@"{num} -> {factorsString}");
+
+            // Record any maximum uses of a single factor in the construction of a number
             foreach (var factor in factors) {
                 if (!maxFactors.ContainsKey(factor.Key)) {
                     maxFactors.Add(factor.Key, factor.Value);
                 } else {
-                    maxFactors[factor.Key] += factor.Value;
+                    maxFactors[factor.Key] = Math.Max(maxFactors[factor.Key], factor.Value);
                 }
             }
         }
 
-        Console.WriteLine($@"Prime: Factor Count");
+        Console.WriteLine();
+        Console.WriteLine($@"Total primes: {primes.Count}");
+
+        Console.WriteLine();
+        Console.WriteLine($@"Prime: Max Factor Count");
         foreach (var factor in maxFactors) {
             Console.WriteLine($@"{factor.Key}:     {factor.Value}");
         }
