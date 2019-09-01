@@ -72,7 +72,7 @@ namespace LateralInteger {
         turns out to be a waste in  terms of information
         per unit of bandwidth.
 
-        - Bit shifting now means shifting array indexes, which
+        - Bit shifting now means shifting array indices, which
         can still be relatively quick. And again, you shift
         like 32 of them at the same time.
 
@@ -84,21 +84,45 @@ namespace LateralInteger {
         complete. It's like you'd always have overflow bit
         information available.
 
-        - Revercimals
+        - Revercimals: n-adics, p-adics
 
         Revercimals might work well in this format. Multiplication
         on the lintegers will require classical integer
         multiplication techniques, which at best have something
         like n*log(n) complexity. Revercimals can do better.
 
-        - Naming
+        === Modular arithmetic ===
 
-        Renamed everything from Xorteger to LInteger, meaning:
+        Supposing you implement bit shifts as increnting and
+        decrementing the pointer to the word slice that points
+        to the most-significant bit. In a modular sense of
+        of course, such that the index is: i % WordLength
 
-        Lateral Integer
+        You can take arbitrary sub-ranges of bits, and pawn
+        them off to parallel or concurrent processes, provided
+        that the operations on these numbers are mathematically
+        sound.
 
+        For weird number systems, the order of bits could be
+        defined by some kind of function. The order could be
+        jumbled in principle, but linearized by reorganizing
+        the pointers to physical memory.
+
+        For cache coherency, you need to take special care here.
+
+        If a single adder requires a pass over *all* the bits
+        of a number, you cannot trivially parallelize multiple
+        operations involving that number.
+
+        With something like p-adic arithmetic, utilizing the
+        Chinese Remainder Theorem, you might be able to split
+        up general polynomial calculations on these numbers,
+        parallelizing calculations happening at multiple scales
+        of 2 numbers.
 
         === Performance Testing ===
+
+        First, regular managed dotnet.
 
         With only the first 8 integers of A and B set to
         non-zero values, we get a vast difference in perf:
@@ -130,36 +154,31 @@ namespace LateralInteger {
 
         --
 
-        Hypothesis: Burst could SIMD this quite well
+        Hypothesis: This could vectorize quite well?
 
         Theoretically, given some SIMD set with 16
         and 8 bit word intrinsics, a vectorizer
         should be able to take your fixed point
         arithmetic and optimize it really well.
 
-        However, given the DOTNET type system specifics,
+        However, given the DotNet type system specifics,
         and perhaps that Burst is in its infancy, it
-        rarely ever happens. This made us consider
-        moving to RUST, where we have manual control
-        over vectorization.
+        rarely ever happens.
 
-        However, this LInteger arithmetic is 32-bit
+        Meanwhile, this LInteger arithmetic is 32-bit
         words all the way. If we parameterize loop
         counts to something that is compile-time
-        constant, Burst should be able to vectorize
-        everything now.
+        constant, Burst might be able to vectorize
+        some inner loops.
 
         --
 
         Int <-> LInt Conversion
 
-        This is a huge bottleneck right now.
+        This is a big bottleneck right now, but
+        you would want to minimize the need for
+        conversion of one to the other anyway.
 
-        --
-
-        It makes sense that integer arithmetic with lots
-        of zeroes, running on cleverly designed hardware,
-        would be able to skip lots of work.
         */
 
         /*
