@@ -1,12 +1,11 @@
-﻿using System;
+using System;
 
 using word_u32 = System.UInt32;
+using word_u16 = System.UInt16;
 using word_u8 = System.Byte;
 
-namespace LateralIntegers
-{
-    class Program
-    {
+namespace LateralInteger {
+    public class Tests {
         /*
         Explanation:
 
@@ -20,12 +19,9 @@ namespace LateralIntegers
         An array of words stores WordLength numbers, each of
         ArrayLength bits.
 
-        Arithmetic on these numbers can be implemented by using
-        the algebra of Boole, using AND, OR, XOR, etc.
-
-        In terms of performance this won't get us any improvements
-        over hardware integers or anything, that's not what this
-        is about. We're just having fun with numbers, really.
+        Arithmetic on these numbers can be implemented  at the
+        software level by using the algebra of Boole, e.g.
+        AND, OR, XOR, etc.
 
         Possible iffy things:
 
@@ -134,25 +130,45 @@ namespace LateralIntegers
 
         --
 
+        Hypothesis: Burst could SIMD this quite well
+
+        Theoretically, given some SIMD set with 16
+        and 8 bit word intrinsics, a vectorizer
+        should be able to take your fixed point
+        arithmetic and optimize it really well.
+
+        However, given the DOTNET type system specifics,
+        and perhaps that Burst is in its infancy, it
+        rarely ever happens. This made us consider
+        moving to RUST, where we have manual control
+        over vectorization.
+
+        However, this LInteger arithmetic is 32-bit
+        words all the way. If we parameterize loop
+        counts to something that is compile-time
+        constant, Burst should be able to vectorize
+        everything now.
+
+        --
+
+        Int <-> LInt Conversion
+
+        This is a huge bottleneck right now.
+
+        --
+
         It makes sense that integer arithmetic with lots
         of zeroes, running on cleverly designed hardware,
         would be able to skip lots of work.
         */
 
-        static void Main(string[] args)
-        {
-            // AddInt32();
-            AddInt8();
-        }
-
-
         /*
         Add 32 32-bit numbers to each other
          */
-        private static void AddInt32() {
+        public static void AddInt32() {
             var rand = new System.Random(1234);
 
-            // Generate some random inputs
+            // Generate some random integer inputs
 
             var aInt = new word_u32[32];
             var bInt = new word_u32[32];
@@ -176,7 +192,7 @@ namespace LateralIntegers
                 UInt.Add(aInt, bInt, rInt);
             }
             watch.Stop();
-            Console.WriteLine("Int adds ticks: " + watch.ElapsedTicks);
+            Console.WriteLine("Integer add ticks: " + watch.ElapsedTicks);
 
             // Perform linteger adds, measure time
 
@@ -186,7 +202,7 @@ namespace LateralIntegers
                 LUInt32.Add(aLInt, bLInt, rLInt);
             }
             watch.Stop();
-            Console.WriteLine("LInt adds ticks: " + watch.ElapsedTicks);
+            Console.WriteLine("LInteger<32> add ticks: " + watch.ElapsedTicks);
 
             // Print linteger addition results as integers
 
@@ -203,9 +219,65 @@ namespace LateralIntegers
         }
 
         /*
-       Add 32 8-bit numbers to each other
+        Add 32 16-bit numbers to each other
         */
-        private static void AddInt8() {
+        public static void AddInt16() {
+            var rand = new System.Random(1234);
+
+            // Generate some random inputs
+
+            var aInt = new word_u16[32];
+            var bInt = new word_u16[32];
+            for (uint i = 0; i < aInt.Length; i++) {
+                aInt[i] = (ushort)rand.Next(0, ushort.MaxValue >> 2);
+                bInt[i] = (ushort)rand.Next(0, ushort.MaxValue >> 2);
+            }
+
+            // Convert to LInt format
+
+            var aLInt = new word_u32[16];
+            var bLInt = new word_u32[16];
+            LUInt32.ToLInt(aInt, aLInt);
+            LUInt32.ToLInt(bInt, bLInt);
+
+            // Perform regular integer adds, measure time
+
+            var rInt = new word_u16[32];
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0; i < 99999; i++) {
+                UInt.Add(aInt, bInt, rInt);
+            }
+            watch.Stop();
+            Console.WriteLine("ushort add ticks: " + watch.ElapsedTicks);
+
+            // Perform linteger adds, measure time
+
+            var rLInt = new word_u32[16];
+            watch = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0; i < 99999; i++) {
+                LUInt32.Add(aLInt, bLInt, rLInt);
+            }
+            watch.Stop();
+            Console.WriteLine("LInteger<u16> adds ticks: " + watch.ElapsedTicks);
+
+            // Print linteger addition results as integers
+
+            var rAsInt = new word_u16[32];
+            LUInt32.ToInt(rLInt, rAsInt);
+
+            UInt.Print(aInt);
+            Console.WriteLine("++++++++++++++++++++++++++++++++");
+            UInt.Print(bInt);
+            Console.WriteLine("================================");
+            UInt.Print(rAsInt);
+            Console.WriteLine("===== should be equal to: ======");
+            UInt.Print(rInt);
+        }
+
+        /*
+        Add 32 8-bit numbers to each other
+        */
+        public static void AddInt8() {
             var rand = new System.Random(1234);
 
             // Generate some random inputs
@@ -232,7 +304,7 @@ namespace LateralIntegers
                 UInt.Add(aInt, bInt, rInt);
             }
             watch.Stop();
-            Console.WriteLine("Byte adds ticks: " + watch.ElapsedTicks);
+            Console.WriteLine("Byte add ticks: " + watch.ElapsedTicks);
 
             // Perform linteger adds, measure time
 
@@ -242,7 +314,7 @@ namespace LateralIntegers
                 LUInt32.Add(aLInt, bLInt, rLInt);
             }
             watch.Stop();
-            Console.WriteLine("LInt adds ticks: " + watch.ElapsedTicks);
+            Console.WriteLine("LInteger<u8> adds ticks: " + watch.ElapsedTicks);
 
             // Print linteger addition results as integers
 
@@ -257,14 +329,18 @@ namespace LateralIntegers
             Console.WriteLine("===== should be equal to: ======");
             UInt.Print(rInt);
         }
-
-        
     }
 
     public static class UInt {
         public static void Add(in word_u32[] a, in word_u32[] b, word_u32[] r) {
             for (int i = 0; i < a.Length; i++) {
                 r[i] = a[i] + b[i];
+            }
+        }
+
+        public static void Add(in word_u16[] a, in word_u16[] b, word_u16[] r) {
+            for (int i = 0; i < a.Length; i++) {
+                r[i] = (word_u16)(a[i] + b[i]);
             }
         }
 
@@ -275,6 +351,12 @@ namespace LateralIntegers
         }
 
         public static void Print(in word_u32[] ints) {
+            for (int i = 0; i < ints.Length; i++) {
+                Console.WriteLine($@"[{i}]: {ints[i]}");
+            }
+        }
+
+        public static void Print(in word_u16[] ints) {
             for (int i = 0; i < ints.Length; i++) {
                 Console.WriteLine($@"[{i}]: {ints[i]}");
             }
@@ -307,6 +389,15 @@ namespace LateralIntegers
             }
         }
 
+        public static void ToLInt(in word_u16[] ints, word_u32[] lints) {
+            for (int b = 0; b < lints.Length; b++) {
+                lints[b] = 0;
+                for (int i = 0; i < ints.Length; i++) {
+                    lints[b] |= (((uint)ints[i] >> b) & 0x0000_0001) << i;
+                }
+            }
+        }
+
         public static void ToLInt(in word_u8[] ints, word_u32[] lints) {
             for (int b = 0; b < lints.Length; b++) {
                 lints[b] = 0;
@@ -321,6 +412,15 @@ namespace LateralIntegers
                 ints[i] = 0;
                 for (int b = 0; b < lints.Length; b++) {
                     ints[i] |= ((lints[b] >> i) & 0x0000_0001) << b;
+                }
+            }
+        }
+
+        public static void ToInt(in word_u32[] lints, word_u16[] ints) {
+            for (int i = 0; i < ints.Length; i++) {
+                ints[i] = 0;
+                for (int b = 0; b < lints.Length; b++) {
+                    ints[i] |= (ushort)(((lints[b] >> i) & 0x0000_0001) << b);
                 }
             }
         }
